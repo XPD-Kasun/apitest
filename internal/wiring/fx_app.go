@@ -33,7 +33,7 @@ func WireApp(config *AppConfig) fx.Option {
 			fx.Annotate(sql.NewMySqlTaskRepo, fx.As(new(task.TaskRepo)), fx.ParamTags(`name:"dbConn"`)),
 
 			fx.Annotate(func(config *AppConfig, userRepo user.AppUserRepo) *user.UserServiceImpl {
-				var usersvc = user.NewUserServiceImpl(userRepo, config.EnvKeyName)
+				var usersvc = user.NewUserServiceImpl(userRepo, config.JwtKeyName)
 				return usersvc
 			}, fx.As(new(user.UserService))),
 

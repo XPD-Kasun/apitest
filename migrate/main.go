@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"errors"
 	"flag"
+	"fmt"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/rs/zerolog/log"
 )
 
 func getArgs() (string, error) {
@@ -26,21 +29,24 @@ type s interface{}
 
 func main() {
 
-	dir, err := getArgs()
-	logError(err)
+	username := os.Getenv("DB_USERNAME")
+	password := os.Getenv("DB_PASSWORD")
 
-	db, err := sql.Open("mysql", "xpd:XPD@tcp(127.0.0.1)/events")
-	logError(err)
+	dir, err := getArgs()
+	log.Error().Err(err).Send()
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(127.0.0.1)/events", username, password))
+	log.Error().Err(err).Send()
 
 	driver, err := mysql.WithInstance(db, &mysql.Config{})
-	logError(err)
+	log.Error().Err(err).Send()
 
 	migration, err := migrate.NewWithDatabaseInstance("file://migrations", "mysql", driver)
-	logError(err)
+	log.Error().Err(err).Send()
 
 	version, dirty, err := migration.Version()
 	if !errors.Is(err, migrate.ErrNilVersion) {
-		logError(err)
+		log.Error().Err(err).Send()
 	}
 
 	if dirty {
@@ -55,5 +61,5 @@ func main() {
 	default:
 		err = errors.New("direction should be either up or down")
 	}
-	logError(err)
+	log.Error().Err(err).Send()
 }

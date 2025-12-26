@@ -15,7 +15,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.uber.org/fx"
@@ -53,16 +55,27 @@ type SetupServerParams struct {
 
 func main() {
 
+	profile, isFound := os.LookupEnv("PROFILE")
+	if !isFound {
+		fmt.Println("PROFILE is not provided. Setting to dev")
+		os.Setenv("PROFILE", "dev")
+		profile = "dev"
+	}
+
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	logger.InitLogger()
 
-	os.Setenv("jwtKey", "abcd1234")
+	if profile != "production" {
+		err := godotenv.Load()
+		if err != nil {
+			fmt.Println(".env file not found. Configuration must be available at environment vals.")
+		}
+	}
 
-	config := wiring.AppConfig{
-		EnvKeyName: "jwtKey",
-		DbConnName: "xpd:XPD@tcp(localhost)/apitest",
-		ServerPort: 8081,
-		Provider:   "mysql",
+	var config wiring.AppConfig
+	err := env.Parse(&config)
+	if err != nil {
+		panic(err)
 	}
 
 	fxAppModule := wiring.WireApp(&config)

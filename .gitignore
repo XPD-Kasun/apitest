@@ -1,3 +1,5 @@
 .gemini.md
 tmp
 *.exe
+fn.go
+.env

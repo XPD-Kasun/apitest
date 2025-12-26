@@ -11,12 +11,12 @@ import (
 )
 
 type UserServiceImpl struct {
-	userRepo   AppUserRepo
-	envKeyName string
+	userRepo AppUserRepo
+	jwtKey   string
 }
 
-func NewUserServiceImpl(repo AppUserRepo, envKeyName string) *UserServiceImpl {
-	return &UserServiceImpl{userRepo: repo, envKeyName: envKeyName}
+func NewUserServiceImpl(repo AppUserRepo, jwtKey string) *UserServiceImpl {
+	return &UserServiceImpl{userRepo: repo, jwtKey: jwtKey}
 }
 
 // GetById implements [UserService].
