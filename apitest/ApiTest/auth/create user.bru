@@ -1,0 +1,32 @@
+meta {
+  name: create user
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:8081/api/v1/users/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "id": 123,
+    "username": "jdoe",
+    "password": "hashed_password_123",
+    "firstname": "John",
+    "lastname": "Doe",
+    "email": "john.doe@example.com"
+  }
+}
+
+body:form-urlencoded {
+  username: XPD
+  password: XPD
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

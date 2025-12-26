@@ -1,0 +1,49 @@
+
+scalar Date
+
+type User {
+    id: ID!
+    name: String!
+    age: Int!
+    tasks: [Task!]!
+}
+
+type Task {
+    id: ID!
+    name: String!
+    descript: String!
+    createdAt: Date!
+    due: Date!
+    done: Boolean!
+    users: [User!]
+}
+
+input TaskCreateInput {    
+    name: String!
+    descript: String!
+    createdAt: Date!
+    due: Date!
+    done: Boolean!
+}
+
+type Mutation {
+    addTask(task: TaskCreateInput!): ID!
+    assignUser(taskId: Int, userId: Int): ID!
+}
+
+type PaginatedTasks{
+    items: [Task!]
+    nextCursor: Int!
+    hasMore: Boolean!
+}
+
+type PaginatedUsers{
+    items: [User!]
+    nextCursor: Int!
+    hasMore: Boolean!
+}
+
+type Query {
+    users: [User!]
+    tasks(cursor:Int!, limit:Int!): PaginatedTasks
+}

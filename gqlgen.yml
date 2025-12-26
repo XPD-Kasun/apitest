@@ -1,0 +1,29 @@
+schema:
+  - internal/adaptors/driving/gql/schema.graphqls
+
+exec:
+  package: gql
+  layout: single-file
+  filename: internal/adaptors/driving/gql/rt.go
+
+model:
+  package: gql
+  filename: internal/adaptors/driving/gql/models.go
+
+resolver:
+  package: gql
+  layout: follow-schema
+  dir: internal/adaptors/driving/gql
+  filename_template: "{name}.resolver.go"
+
+models:
+  Date:
+    model: apitest/internal/adaptors/driving/gql.Date
+
+  User:
+    fields:
+      tasks:
+        resolver: true
+  
+  PaginatedTasks:
+      model: apitest/internal/adaptors/driving/gql.PaginatedTasks
