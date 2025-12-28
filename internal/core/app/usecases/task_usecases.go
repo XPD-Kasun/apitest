@@ -18,6 +18,11 @@ type taskUseCase struct {
 	taskSvc task.TaskService
 }
 
+// GetAssignmentsForTask implements [ports.TaskUseCase].
+func (t *taskUseCase) GetAssignmentsForTask(taskId int) ([]*task.Assignment, error) {
+	return t.taskSvc.GetAssignments(taskId)
+}
+
 // GetTasks implements [ports.TaskUseCase].
 func (t *taskUseCase) GetTasks(cursor int, limit int) (*baserepo.PaginatedResult[*task.Task, int], error) {
 	return t.taskSvc.GetTasks(cursor, limit)

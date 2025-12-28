@@ -34,3 +34,14 @@ func ToTask(taskInput *TaskCreateInput) *task.Task {
 		Due:         time.Time(taskInput.Due),
 	}
 }
+
+func ToGraphTask(t *task.Task) *Task {
+	return &Task{
+		ID:        strconv.Itoa(t.Id),
+		Name:      t.Taskname,
+		Descript:  t.Description,
+		CreatedAt: Date(t.CreatedAt),
+		Due:       Date(t.Due),
+		Done:      t.Done,
+	}
+}

@@ -8,14 +8,17 @@ import (
 	"apitest/internal/core/app/usecases"
 	"apitest/internal/core/task"
 	"apitest/internal/core/user"
+	"fmt"
 
 	sql2 "database/sql"
 
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/mysqldialect"
 	"go.uber.org/fx"
 )
 
 func WireApp(config *AppConfig) fx.Option {
-
 	var module fx.Option = fx.Module(
 
 		"app",
@@ -24,13 +27,20 @@ func WireApp(config *AppConfig) fx.Option {
 
 		fx.Provide(
 			fx.Annotate(func(config *AppConfig) (*sql2.DB, error) {
-				return sql2.Open(config.Provider, config.DbConnName)
+				dbConString := fmt.Sprintf("%s:%s@tcp(localhost)/apitest?charset=utf8mb4&parseTime=True&loc=Local", config.DbUserName, config.DbPassword)
+				return sql2.Open(config.Provider, dbConString)
 			}, fx.ResultTags(`name:"dbConn"`)),
 		),
 
 		fx.Provide(
+			fx.Annotate(func(db *sql2.DB) *bun.DB {
+				return bun.NewDB(db, mysqldialect.New())
+			}, fx.ParamTags(`name:"dbConn"`)),
+		),
+
+		fx.Provide(
 			fx.Annotate(sql.NewMySqlUserRepo, fx.As(new(user.AppUserRepo)), fx.ParamTags(`name:"dbConn"`)),
-			fx.Annotate(sql.NewMySqlTaskRepo, fx.As(new(task.TaskRepo)), fx.ParamTags(`name:"dbConn"`)),
+			fx.Annotate(sql.NewMySqlTaskRepo, fx.As(new(task.TaskRepo))),
 
 			fx.Annotate(func(config *AppConfig, userRepo user.AppUserRepo) *user.UserServiceImpl {
 				var usersvc = user.NewUserServiceImpl(userRepo, config.JwtKeyName)

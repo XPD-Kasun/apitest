@@ -25,5 +25,11 @@ models:
       tasks:
         resolver: true
   
+  Task:
+    fields:
+      users:
+        resolver: true
+
+  
   PaginatedTasks:
       model: apitest/internal/adaptors/driving/gql.PaginatedTasks

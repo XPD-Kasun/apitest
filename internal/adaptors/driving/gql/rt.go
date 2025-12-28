@@ -3,6 +3,7 @@
 package gql
 
 import (
+	"apitest/internal/core/common/baserepo"
 	"bytes"
 	"context"
 	"embed"
@@ -40,6 +41,7 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Task() TaskResolver
 	User() UserResolver
 }
 
@@ -93,7 +95,10 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Users(ctx context.Context) ([]*User, error)
-	Tasks(ctx context.Context, cursor int, limit int) (*PaginatedTasks, error)
+	Tasks(ctx context.Context, cursor int, limit int) (*baserepo.PaginatedResult[*Task, int], error)
+}
+type TaskResolver interface {
+	Users(ctx context.Context, obj *Task) ([]*User, error)
 }
 type UserResolver interface {
 	Tasks(ctx context.Context, obj *User) ([]*Task, error)
@@ -578,7 +583,7 @@ func (ec *executionContext) fieldContext_Mutation_assignUser(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _PaginatedTasks_items(ctx context.Context, field graphql.CollectedField, obj *PaginatedTasks) (ret graphql.Marshaler) {
+func (ec *executionContext) _PaginatedTasks_items(ctx context.Context, field graphql.CollectedField, obj *baserepo.PaginatedResult[*Task, int]) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
@@ -623,7 +628,7 @@ func (ec *executionContext) fieldContext_PaginatedTasks_items(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _PaginatedTasks_nextCursor(ctx context.Context, field graphql.CollectedField, obj *PaginatedTasks) (ret graphql.Marshaler) {
+func (ec *executionContext) _PaginatedTasks_nextCursor(ctx context.Context, field graphql.CollectedField, obj *baserepo.PaginatedResult[*Task, int]) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
@@ -652,7 +657,7 @@ func (ec *executionContext) fieldContext_PaginatedTasks_nextCursor(_ context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _PaginatedTasks_hasMore(ctx context.Context, field graphql.CollectedField, obj *PaginatedTasks) (ret graphql.Marshaler) {
+func (ec *executionContext) _PaginatedTasks_hasMore(ctx context.Context, field graphql.CollectedField, obj *baserepo.PaginatedResult[*Task, int]) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
@@ -828,7 +833,7 @@ func (ec *executionContext) _Query_tasks(ctx context.Context, field graphql.Coll
 			return ec.resolvers.Query().Tasks(ctx, fc.Args["cursor"].(int), fc.Args["limit"].(int))
 		},
 		nil,
-		ec.marshalOPaginatedTasks2ᚖapitestᚋinternalᚋadaptorsᚋdrivingᚋgqlᚐPaginatedTasks,
+		ec.marshalOPaginatedTasks2ᚖapitestᚋinternalᚋcoreᚋcommonᚋbaserepoᚐPaginatedResult,
 		true,
 		false,
 	)
@@ -1155,7 +1160,7 @@ func (ec *executionContext) _Task_users(ctx context.Context, field graphql.Colle
 		field,
 		ec.fieldContext_Task_users,
 		func(ctx context.Context) (any, error) {
-			return obj.Users, nil
+			return ec.resolvers.Task().Users(ctx, obj)
 		},
 		nil,
 		ec.marshalOUser2ᚕᚖapitestᚋinternalᚋadaptorsᚋdrivingᚋgqlᚐUserᚄ,
@@ -1168,8 +1173,8 @@ func (ec *executionContext) fieldContext_Task_users(_ context.Context, field gra
 	fc = &graphql.FieldContext{
 		Object:     "Task",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -2886,7 +2891,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 var paginatedTasksImplementors = []string{"PaginatedTasks"}
 
-func (ec *executionContext) _PaginatedTasks(ctx context.Context, sel ast.SelectionSet, obj *PaginatedTasks) graphql.Marshaler {
+func (ec *executionContext) _PaginatedTasks(ctx context.Context, sel ast.SelectionSet, obj *baserepo.PaginatedResult[*Task, int]) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, paginatedTasksImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3078,35 +3083,66 @@ func (ec *executionContext) _Task(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._Task_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Task_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "descript":
 			out.Values[i] = ec._Task_descript(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._Task_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "due":
 			out.Values[i] = ec._Task_due(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "done":
 			out.Values[i] = ec._Task_done(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "users":
-			out.Values[i] = ec._Task_users(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Task_users(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3994,7 +4030,7 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOPaginatedTasks2ᚖapitestᚋinternalᚋadaptorsᚋdrivingᚋgqlᚐPaginatedTasks(ctx context.Context, sel ast.SelectionSet, v *PaginatedTasks) graphql.Marshaler {
+func (ec *executionContext) marshalOPaginatedTasks2ᚖapitestᚋinternalᚋcoreᚋcommonᚋbaserepoᚐPaginatedResult(ctx context.Context, sel ast.SelectionSet, v *baserepo.PaginatedResult[*Task, int]) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

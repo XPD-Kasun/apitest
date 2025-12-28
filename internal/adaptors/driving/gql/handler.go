@@ -13,7 +13,21 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
+type loaderSources struct {
+	uc ports.UserUseCase
+	tc ports.TaskUseCase
+}
+
+type ctxKey string
+
+const loaderKey ctxKey = "mxkey"
+
 func NewHandler(uc ports.UserUseCase, tu ports.TaskUseCase) gin.HandlerFunc {
+
+	// var sources = loaderSources{
+	// 	uc: uc,
+	// 	tc: tu,
+	// }
 
 	schema := NewExecutableSchema(Config{Resolvers: NewResolver(uc, tu)})
 	fmt.Println(schema)
@@ -30,10 +44,15 @@ func NewHandler(uc ports.UserUseCase, tu ports.TaskUseCase) gin.HandlerFunc {
 	})
 
 	return func(c *gin.Context) {
+		//dataloader := dataloadgen.NewLoader()
+		//ctx := context.WithValue(c.Request.Context(), loaderKey)
+		//c.Request = c.Request.WithContext(ctx)
 		h.ServeHTTP(c.Writer, c.Request)
 	}
 
 }
+
+// func GetLoadersFromCtx() lo
 
 // Defining the Playground handler
 func PlaygroundHandler(gqlUrl string) gin.HandlerFunc {
@@ -43,3 +62,12 @@ func PlaygroundHandler(gqlUrl string) gin.HandlerFunc {
 		h.ServeHTTP(c.Writer, c.Request)
 	}
 }
+
+// func Middleware() gin.HandlerFunc {
+
+// 	return func(c *gin.Context) {
+
+// 		dataloader := dataloadgen.NewLoader()
+
+// 	}
+// }

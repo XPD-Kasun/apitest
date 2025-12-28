@@ -1,6 +1,8 @@
 package task
 
-import "time"
+import (
+	"time"
+)
 
 type Task struct {
 	Id          int       `json:"id"`

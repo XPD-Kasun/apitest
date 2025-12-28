@@ -1,42 +1,46 @@
 package sql
 
 import (
+	"apitest/internal/adaptors/driven/persistance/sql/sqldto"
 	"apitest/internal/core/common/baserepo"
+	"apitest/internal/core/common/funcs"
 	"apitest/internal/core/task"
+	"apitest/internal/logger"
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/rs/zerolog/log"
+	"github.com/uptrace/bun"
 )
 
 var (
 	NoSingleTaskErr = errors.New("No single task found")
 )
 
-func NewMySqlTaskRepo(db *sql.DB) (*MySqlTaskRepo, error) {
+func NewMySqlTaskRepo(db *bun.DB) (*MySqlTaskRepo, error) {
+	db.AddQueryHook(&QueryHook{})
 	return &MySqlTaskRepo{db: db}, nil
 }
 
 var s task.TaskRepo = &MySqlTaskRepo{}
 
 type MySqlTaskRepo struct {
-	db *sql.DB
+	db *bun.DB
 }
 
 // GetAssignments implements [task.TaskRepo].
 func (t *MySqlTaskRepo) GetAssignments(taskId int) ([]*task.Assignment, error) {
-	cols := []string{"id", "user_id", "task_id"}
-	q := sq.Select(cols...).Where(sq.Eq{"task_id": taskId})
-	sqlStr, args := q.MustSql()
-	log.Debug().Str("sql", sqlStr).Interface("args", args).Msg("GetAssignment")
-
-	rows, err := q.RunWith(t.db).Query()
+	var assigns []*sqldto.AssignmentSqlDto
+	err := t.db.NewSelect().Model(&assigns).Where("task_id = ?", taskId).Scan(context.TODO())
 	if err != nil {
+		logger.Error().Err(err).Msg("MySqlTaskRepo::GetAssignments had error")
 		return nil, err
 	}
-	return scanAssignments(rows, cols)
+	return funcs.Map(assigns, (*sqldto.AssignmentSqlDto).ToDomainAssignment), nil
 }
 
 // GetById implements [task.TaskRepo].
@@ -60,16 +64,23 @@ func (t *MySqlTaskRepo) GetById(id int) (*task.Task, error) {
 
 // GetByPage implements [task.TaskRepo].
 func (t *MySqlTaskRepo) GetByPage(filter *baserepo.PaginatedFilter[int]) (*baserepo.PaginatedResult[*task.Task, int], error) {
+	var tasks []*sqldto.TaskSqlDto
+	err := t.db.NewSelect().Model(&tasks).
+		Where("id >= ?", filter.Cursor).
+		Limit(filter.Limit).
+		Scan(context.TODO())
 
-	cols := []string{"id", "taskname", "description", "created_at", "due", "done"}
-	rows, err := sq.Select(cols...).From("task").Where(sq.GtOrEq{"id": filter.Cursor}).OrderBy("id asc").
-		Limit(uint64(filter.Limit)).RunWith(t.db).Query()
 	if err != nil {
+		logger.Error().Err(err).Msg("MySqlTaskRepo::GetByPage")
 		return nil, err
 	}
-	tasks, err := scanTasks(rows, cols)
+
+	for _, t := range tasks {
+		fmt.Println(t)
+	}
+
 	result := baserepo.PaginatedResult[*task.Task, int]{
-		Items:      tasks,
+		Items:      funcs.Map(tasks, (*sqldto.TaskSqlDto).ToCoreTask),
 		HasMore:    true,
 		NextCursor: filter.Limit + filter.Cursor,
 	}
@@ -111,18 +122,27 @@ func (t *MySqlTaskRepo) GetAllTasks() ([]*task.Task, error) {
 
 // GetTasksForUser implements TaskRepo.
 func (t MySqlTaskRepo) GetTasksForUser(userId int) ([]*task.Task, error) {
-	cols := []string{"id", "created_at", "taskname", "description", "due", "done"}
-	rows, err := sq.Select().
-		From("assignment a").
-		Join("inner join users u on a.userid = u.id").
-		Where("u.id == ?", userId).RunWith(t.db).Query()
 
-	if err != nil {
-		log.Err(err).Msg("error running sql")
-		return nil, err
-	}
+	tasks := make([]*sqldto.TaskSqlDto, 0)
+	err := bun.NewRawQuery(t.db, `
+		SELECT t.* FROM task t inner join assignment a on t.id = a.task_id 
+		where a.user_id = ?
+	`, userId).Scan(context.TODO(), &tasks)
 
-	return scanTasks(rows, cols)
+	return funcs.Map(tasks, (*sqldto.TaskSqlDto).ToCoreTask), err
+
+	// cols := []string{"id", "created_at", "taskname", "description", "due", "done"}
+	// rows, err := sq.Select().
+	// 	From("assignment a").
+	// 	Join("inner join users u on a.userid = u.id").
+	// 	Where("u.id == ?", userId).RunWith(t.db).Query()
+
+	// if err != nil {
+	// 	log.Err(err).Msg("error running sql")
+	// 	return nil, err
+	// }
+
+	// return scanTasks(rows, cols)
 }
 
 // Insert implements TaskRepo.

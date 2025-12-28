@@ -106,7 +106,7 @@ func (m *MySqlUserRepo) GetByPage(filter *baserepo.PaginatedFilter[int]) (*baser
 
 // GetById implements user.AppUserRepo.
 func (m *MySqlUserRepo) GetById(id int) (*user.AppUser, error) {
-	row := m.db.QueryRow("SELECT * FROM appuser WHERE id = $1", id)
+	row := m.db.QueryRow("SELECT * FROM appuser WHERE id = ?", id)
 	appUser := &user.AppUser{}
 	err := row.Scan(&appUser.Id, &appUser.Email, &appUser.Firstname, &appUser.Lastname, &appUser.UserName, &appUser.Password)
 
