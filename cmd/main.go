@@ -62,9 +62,6 @@ func main() {
 		profile = "dev"
 	}
 
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	logger.InitLogger()
-
 	if profile != "production" {
 		err := godotenv.Load()
 		if err != nil {
@@ -78,6 +75,7 @@ func main() {
 		panic(err)
 	}
 
+	logger.InitLogger(config.LogLevel)
 	fxAppModule := wiring.WireApp(&config)
 
 	fx.New(

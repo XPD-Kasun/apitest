@@ -16,12 +16,6 @@ require (
 )
 
 require (
-	github.com/vikstrous/dataloadgen v0.0.10 // indirect
-	go.opentelemetry.io/otel v1.37.0 // indirect
-	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-)
-
-require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect

@@ -1,9 +1,8 @@
 package sql
 
 import (
+	"apitest/internal/logger"
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/uptrace/bun"
 )
@@ -15,5 +14,6 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) cont
 }
 
 func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
-	fmt.Println(time.Since(event.StartTime), string(event.Query))
+	logger.Trace().Str("sqlQuery", event.Query).Interface("stashMap", event.Stash).
+		Send()
 }

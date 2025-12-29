@@ -51,7 +51,7 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Mutation struct {
 		AddTask    func(childComplexity int, task TaskCreateInput) int
-		AssignUser func(childComplexity int, taskID *int, userID *int) int
+		AssignUser func(childComplexity int, taskID int, userID int) int
 	}
 
 	PaginatedTasks struct {
@@ -91,7 +91,7 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	AddTask(ctx context.Context, task TaskCreateInput) (string, error)
-	AssignUser(ctx context.Context, taskID *int, userID *int) (string, error)
+	AssignUser(ctx context.Context, taskID int, userID int) (string, error)
 }
 type QueryResolver interface {
 	Users(ctx context.Context) ([]*User, error)
@@ -144,7 +144,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AssignUser(childComplexity, args["taskId"].(*int), args["userId"].(*int)), true
+		return e.complexity.Mutation.AssignUser(childComplexity, args["taskId"].(int), args["userId"].(int)), true
 
 	case "PaginatedTasks.hasMore":
 		if e.complexity.PaginatedTasks.HasMore == nil {
@@ -375,7 +375,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 	return introspection.WrapTypeFromDef(ec.Schema(), ec.Schema().Types[name]), nil
 }
 
-//go:embed "schema.graphqls"
+//go:embed "schema.graphqls" "tasks.graphqls"
 var sourcesFS embed.FS
 
 func sourceData(filename string) string {
@@ -388,6 +388,7 @@ func sourceData(filename string) string {
 
 var sources = []*ast.Source{
 	{Name: "schema.graphqls", Input: sourceData("schema.graphqls"), BuiltIn: false},
+	{Name: "tasks.graphqls", Input: sourceData("tasks.graphqls"), BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
@@ -409,12 +410,12 @@ func (ec *executionContext) field_Mutation_addTask_args(ctx context.Context, raw
 func (ec *executionContext) field_Mutation_assignUser_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "taskId", ec.unmarshalOInt2ᚖint)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "taskId", ec.unmarshalNInt2int)
 	if err != nil {
 		return nil, err
 	}
 	args["taskId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId", ec.unmarshalOInt2ᚖint)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId", ec.unmarshalNInt2int)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +551,7 @@ func (ec *executionContext) _Mutation_assignUser(ctx context.Context, field grap
 		ec.fieldContext_Mutation_assignUser,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().AssignUser(ctx, fc.Args["taskId"].(*int), fc.Args["userId"].(*int))
+			return ec.resolvers.Mutation().AssignUser(ctx, fc.Args["taskId"].(int), fc.Args["userId"].(int))
 		},
 		nil,
 		ec.marshalNID2string,
@@ -4009,24 +4010,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	_ = sel
 	_ = ctx
 	res := graphql.MarshalBoolean(*v)
-	return res
-}
-
-func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalInt(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	_ = sel
-	_ = ctx
-	res := graphql.MarshalInt(*v)
 	return res
 }
 

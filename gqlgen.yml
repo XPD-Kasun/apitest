@@ -1,5 +1,5 @@
 schema:
-  - internal/adaptors/driving/gql/schema.graphqls
+  - internal/adaptors/driving/gql/**/*.graphqls
 
 exec:
   package: gql
