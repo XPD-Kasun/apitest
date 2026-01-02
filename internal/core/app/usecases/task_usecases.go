@@ -18,6 +18,21 @@ type taskUseCase struct {
 	taskSvc task.TaskService
 }
 
+// GetTaskById implements [ports.TaskUseCase].
+func (t *taskUseCase) GetTaskById(id int) (*task.Task, error) {
+	return t.taskSvc.GetTaskById(id)
+}
+
+// GetTasksByIds implements [ports.TaskUseCase].
+func (t *taskUseCase) GetTasksByIds(ids []int) ([]*task.Task, error) {
+	return t.taskSvc.GetTasksByIds(ids)
+}
+
+// AssignTaskToUser implements [ports.TaskUseCase].
+func (t *taskUseCase) AssignTaskToUser(taskId int, userId int) (*task.Assignment, error) {
+	return t.taskSvc.Assign(taskId, userId)
+}
+
 // GetAssignmentsForTask implements [ports.TaskUseCase].
 func (t *taskUseCase) GetAssignmentsForTask(taskId int) ([]*task.Assignment, error) {
 	return t.taskSvc.GetAssignments(taskId)

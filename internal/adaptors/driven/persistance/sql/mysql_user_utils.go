@@ -14,6 +14,5 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) cont
 }
 
 func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
-	logger.Trace().Str("sqlQuery", event.Query).Interface("stashMap", event.Stash).
-		Send()
+	logger.Trace().Str("sqlQuery", event.Query).Send()
 }

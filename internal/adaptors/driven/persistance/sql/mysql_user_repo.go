@@ -1,103 +1,68 @@
 package sql
 
 import (
+	"apitest/internal/adaptors/driven/persistance/sql/sqldto"
 	"apitest/internal/core/common/baserepo"
 	"apitest/internal/core/common/filters"
+	"apitest/internal/core/common/funcs"
 	"apitest/internal/core/user"
-	"database/sql"
+	"apitest/internal/logger"
+	"context"
 	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/rs/zerolog/log"
+	"github.com/uptrace/bun"
 )
 
-func NewMySqlUserRepo(db *sql.DB) (*MySqlUserRepo, error) {
+func NewMySqlUserRepo(db *bun.DB) (*MySqlUserRepo, error) {
 	return &MySqlUserRepo{db: db}, nil
 }
 
 type MySqlUserRepo struct {
-	db *sql.DB
-}
-
-func bindUser(row *sql.Row) (*user.AppUser, error) {
-
-	u := user.AppUser{}
-	err := row.Scan(&u.Id, &u.UserName, &u.Password, &u.Firstname, &u.Lastname, &u.Email)
-	if err != nil {
-		return nil, err
-	}
-
-	return &u, nil
-}
-
-func bindUsers(rows *sql.Rows, expectedCount int) (users []*user.AppUser, total int, err error) {
-
-	users = make([]*user.AppUser, 0, 10)
-
-	for rows.Next() {
-		u := user.AppUser{}
-		total++
-		err := rows.Scan(&u.Id, &u.UserName, &u.Password, &u.Firstname, &u.Lastname, &u.Email)
-		if err != nil && expectedCount != total {
-			log.Error().Err(err).Msg("at bind users")
-			continue
-		}
-		users = append(users, &u)
-	}
-
-	return
+	db *bun.DB
 }
 
 // GetByIds implements [user.AppUserRepo].
 func (m *MySqlUserRepo) GetByIds(ids ...int) ([]*user.AppUser, error) {
 
-	q := sq.Select("Id", "UserName", "Password", "Firstname", "Lastname", "Email").From("appuser").
-		Where(sq.Eq{"Id": ids})
-
-	sql, _, _ := q.ToSql()
-	log.Debug().Str("sql", sql).Msg("GetByIds in MysqlUserRepo")
-
-	rows, err := q.RunWith(m.db).Query()
+	var users []*sqldto.UserSqlDto
+	err := bun.NewSelectQuery(m.db).Where("id in (?)", bun.In(ids)).Model(&users).Scan(context.TODO())
 	if err != nil {
+		logger.Error().Err(err).Msg("UserRepo.GetByIds: bun query failed")
 		return nil, err
 	}
 
-	users, _, err := bindUsers(rows, len(ids))
-	return users, err
+	appusers := funcs.Map(users, func(item *sqldto.UserSqlDto) *user.AppUser {
+		return item.ToCoreUser()
+	})
+
+	return appusers, nil
 }
 
 // GetByPage implements [user.AppUserRepo].
 func (m *MySqlUserRepo) GetByPage(filter *baserepo.PaginatedFilter[int]) (*baserepo.PaginatedResult[*user.AppUser, int], error) {
 
-	q := sq.Select("Id", "UserName", "Password", "Firstname", "Lastname", "Email").From("appuser").
-		Where(sq.GtOrEq{"Id": filter.Cursor}).OrderBy("Id asc").Limit(uint64(filter.Limit) + 1)
+	var users []*user.AppUser
+	var hasMore = true
 
-	sql, args := q.MustSql()
-
-	log.Debug().Interface("args", args).Str("sql", sql).Int("cursor", filter.Cursor).
-		Int("limit", filter.Limit).Msg("GetByPage invoked")
-
-	rows, err := q.RunWith(m.db).Query()
-
+	err := bun.NewSelectQuery(m.db).Where("id > ?", filter.Cursor).Limit(filter.Limit + 1).
+		Model(&users).Scan(context.TODO())
 	if err != nil {
+		logger.Error().Err(err).Msg("UserRepo.GetByPage: failed with error")
 		return nil, err
 	}
 
-	u, total, err := bindUsers(rows, filter.Limit+1)
-	if err != nil {
-		return nil, err
-	}
-
-	hasMore, itemLimit := false, len(u)
-	if total == filter.Limit+1 {
-		hasMore = true
-		itemLimit--
+	if len(users) != filter.Limit+1 {
+		hasMore = false
+		fmt.Println("Ok")
+	} else {
+		users = users[:filter.Limit]
 	}
 
 	return &baserepo.PaginatedResult[*user.AppUser, int]{
-		Items:      u[:itemLimit],
+		Items:      users,
 		HasMore:    hasMore,
 		NextCursor: filter.Limit + 1,
 	}, nil
@@ -106,11 +71,9 @@ func (m *MySqlUserRepo) GetByPage(filter *baserepo.PaginatedFilter[int]) (*baser
 
 // GetById implements user.AppUserRepo.
 func (m *MySqlUserRepo) GetById(id int) (*user.AppUser, error) {
-	row := m.db.QueryRow("SELECT * FROM appuser WHERE id = ?", id)
-	appUser := &user.AppUser{}
-	err := row.Scan(&appUser.Id, &appUser.Email, &appUser.Firstname, &appUser.Lastname, &appUser.UserName, &appUser.Password)
-
-	return appUser, err
+	var user sqldto.UserSqlDto
+	err := bun.NewSelectQuery(m.db).Where("id = ?", id).Model(&user).Scan(context.TODO())
+	return user.ToCoreUser(), err
 }
 
 func (m *MySqlUserRepo) GetByUserName(username string) (*user.AppUser, error) {

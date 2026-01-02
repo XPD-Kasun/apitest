@@ -8,6 +8,7 @@ package gql
 import (
 	"apitest/internal/core/common/baserepo"
 	"apitest/internal/core/common/funcs"
+	"apitest/internal/core/user"
 	"apitest/internal/logger"
 	"context"
 	"errors"
@@ -17,12 +18,23 @@ import (
 
 // AddTask is the resolver for the addTask field.
 func (r *mutationResolver) AddTask(ctx context.Context, task TaskCreateInput) (string, error) {
-	panic(fmt.Errorf("not implemented: AddTask - addTask"))
+
+	domainTask := ToTask(&task)
+	domainTask, err := r.TaskUseCase.CreateNewTask(domainTask)
+	if err != nil {
+		return "", err
+	}
+	return strconv.Itoa(domainTask.Id), nil
 }
 
 // AssignUser is the resolver for the assignUser field.
 func (r *mutationResolver) AssignUser(ctx context.Context, taskID int, userID int) (string, error) {
-	panic(fmt.Errorf("not implemented: AssignUser - assignUser"))
+	assignment, err := r.TaskUseCase.AssignTaskToUser(taskID, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return strconv.Itoa(assignment.Id), nil
 }
 
 // Tasks is the resolver for the tasks field.
@@ -46,11 +58,14 @@ func (r *queryResolver) Tasks(ctx context.Context, cursor int, limit int) (*base
 
 // Users is the resolver for the users field.
 func (r *taskResolver) Users(ctx context.Context, obj *Task) ([]*User, error) {
+	appCtx := getAppCtx(ctx)
 	id, err := strconv.Atoi(obj.ID)
+
 	if err != nil {
 		return nil, errors.New("Invalid task id")
 	}
-	assignments, err := r.TaskUseCase.GetAssignmentsForTask(id)
+	// assignments, err := r.TaskUseCase.GetAssignmentsForTask(id)
+	assignments, err := appCtx.AssignmentLoader.Load(ctx, id)
 	if err != nil {
 		return nil, errors.New("error getting associated users")
 	}
@@ -59,8 +74,13 @@ func (r *taskResolver) Users(ctx context.Context, obj *Task) ([]*User, error) {
 	errorList := make([]error, 0)
 
 	for i, a := range assignments {
-		user, err := r.UserUseCase.GetUserById(a.UserId)
+		var user *user.AppUser
+		var err error
+
+		fmt.Println("using userloader >>>")
+		user, err = appCtx.UserLoader.Load(ctx, a.UserId)
 		if err != nil {
+			logger.Error().Err(err).Msg("error getting users")
 			errorList = append(errorList, err)
 		}
 		users[i] = FromAppUser(user)

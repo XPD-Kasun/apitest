@@ -35,12 +35,12 @@ func WireApp(config *AppConfig) fx.Option {
 		fx.Provide(
 			fx.Annotate(func(db *sql2.DB) *bun.DB {
 				return bun.NewDB(db, mysqldialect.New())
-			}, fx.ParamTags(`name:"dbConn"`)),
+			}, fx.ParamTags(`name:"dbConn"`), fx.ResultTags(`name:"bundb"`)),
 		),
 
 		fx.Provide(
-			fx.Annotate(sql.NewMySqlUserRepo, fx.As(new(user.AppUserRepo)), fx.ParamTags(`name:"dbConn"`)),
-			fx.Annotate(sql.NewMySqlTaskRepo, fx.As(new(task.TaskRepo))),
+			fx.Annotate(sql.NewMySqlUserRepo, fx.As(new(user.AppUserRepo)), fx.ParamTags(`name:"bundb"`)),
+			fx.Annotate(sql.NewMySqlTaskRepo, fx.As(new(task.TaskRepo)), fx.ParamTags(`name:"bundb"`)),
 
 			fx.Annotate(func(config *AppConfig, userRepo user.AppUserRepo) *user.UserServiceImpl {
 				var usersvc = user.NewUserServiceImpl(userRepo, config.JwtKeyName)
@@ -57,7 +57,8 @@ func WireApp(config *AppConfig) fx.Option {
 			restapi.NewUserCtrl,
 			restapi.NewTaskCtrl,
 			//graphql
-			gql.NewHandler,
+			fx.Annotate(gql.NewHandler, fx.ResultTags(`name:"gqlMain"`)),
+			fx.Annotate(gql.DataLoaderMiddleware, fx.ResultTags(`name:"dlMiddleware"`)),
 		),
 	)
 	return module

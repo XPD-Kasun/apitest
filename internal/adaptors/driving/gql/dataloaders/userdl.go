@@ -7,7 +7,7 @@ import (
 )
 
 type UserDataloader struct {
-	userUC ports.UserUseCase
+	UserUC ports.UserUseCase
 }
 
 func cloneError(err error, count int) []error {
@@ -22,7 +22,7 @@ func (ud *UserDataloader) GetUsers(ctx context.Context, ids []int) ([]*user.AppU
 	if ctx.Err() != nil {
 		return nil, cloneError(ctx.Err(), len(ids))
 	}
-	users, err := ud.userUC.GetUsersByIds(ids...)
+	users, err := ud.UserUC.GetUsersByIds(ids...)
 	errorset := cloneError(err, len(ids))
 	return users, errorset
 }
@@ -31,5 +31,5 @@ func (ud *UserDataloader) GetUser(ctx context.Context, id int) (*user.AppUser, e
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	return ud.userUC.GetUserById(id)
+	return ud.UserUC.GetUserById(id)
 }

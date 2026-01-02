@@ -32,6 +32,17 @@ type MySqlTaskRepo struct {
 	db *bun.DB
 }
 
+// GetByIds implements [task.TaskRepo].
+func (t *MySqlTaskRepo) GetByIds(ids ...int) ([]*task.Task, error) {
+	var tasks []*task.Task
+	err := bun.NewSelectQuery(t.db).Where("id in (?)", bun.In(ids)).Model(&tasks).Scan(context.TODO())
+	if err != nil {
+		logger.Error().Err(err).Msg("Repo.GetByIds failed")
+		return nil, err
+	}
+	return tasks, nil
+}
+
 // GetAssignments implements [task.TaskRepo].
 func (t *MySqlTaskRepo) GetAssignments(taskId int) ([]*task.Assignment, error) {
 	var assigns []*sqldto.AssignmentSqlDto
@@ -90,7 +101,25 @@ func (t *MySqlTaskRepo) GetByPage(filter *baserepo.PaginatedFilter[int]) (*baser
 
 // AssignTask implements TaskRepo.
 func (t *MySqlTaskRepo) AssignTask(taskId int, userId int) (*task.Assignment, error) {
-	res, err := sq.Insert("assignment").Columns("taskid", "userid").Values(taskId, userId).
+
+	var totalCols = 0
+
+	r := sq.Select("count(*)").From("assignment	").Where(
+		sq.And{
+			sq.Eq{"task_id": taskId}, sq.Eq{"user_id": userId},
+		}).
+		RunWith(t.db).QueryRow()
+
+	err := r.Scan(&totalCols)
+	if err != nil {
+		return nil, errors.Join(errors.New("Cannot get the existing assignments"), err)
+	}
+
+	if totalCols > 0 {
+		return nil, errors.New("Assignment already exists")
+	}
+
+	res, err := sq.Insert("assignment").Columns("task_id", "user_id").Values(taskId, userId).
 		RunWith(t.db).Exec()
 	if err != nil {
 		log.Err(err).Msg("cannot insert new assignment into db.")

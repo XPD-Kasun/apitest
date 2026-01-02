@@ -1,7 +1,10 @@
 package gql
 
 import (
+	"apitest/internal/adaptors/driving/gql/dataloaders"
 	"apitest/internal/core/app/ports"
+	"apitest/internal/core/common"
+	"context"
 	"fmt"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -11,6 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-gonic/gin"
 	"github.com/vektah/gqlparser/v2/ast"
+	"github.com/vikstrous/dataloadgen"
 )
 
 type loaderSources struct {
@@ -21,6 +25,7 @@ type loaderSources struct {
 type ctxKey string
 
 const loaderKey ctxKey = "mxkey"
+const loggerKey ctxKey = "loggerkey"
 
 func NewHandler(uc ports.UserUseCase, tu ports.TaskUseCase) gin.HandlerFunc {
 
@@ -44,15 +49,44 @@ func NewHandler(uc ports.UserUseCase, tu ports.TaskUseCase) gin.HandlerFunc {
 	})
 
 	return func(c *gin.Context) {
-		//dataloader := dataloadgen.NewLoader()
-		//ctx := context.WithValue(c.Request.Context(), loaderKey)
-		//c.Request = c.Request.WithContext(ctx)
+
 		h.ServeHTTP(c.Writer, c.Request)
 	}
 
 }
 
 // func GetLoadersFromCtx() lo
+
+func DataLoaderMiddleware(uc ports.UserUseCase, tu ports.TaskUseCase) gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		taskdl := dataloaders.TaskDataloader{TaskUC: tu}
+		userdl := dataloaders.UserDataloader{UserUC: uc}
+
+		tdl := dataloadgen.NewLoader(taskdl.GetTasks)
+		udl := dataloadgen.NewLoader(userdl.GetUsers)
+		adl := dataloadgen.NewLoader(taskdl.GetAssignments)
+		val := ctx.Request.Context().Value(common.AppContextKey)
+		if val != nil {
+			if appCtx, ok := val.(*common.AppRequestContext); ok {
+				appCtx.TaskLoader = tdl
+				appCtx.UserLoader = udl
+				appCtx.AssignmentLoader = adl
+			}
+		}
+	}
+}
+
+func getAppCtx(ctx context.Context) *common.AppRequestContext {
+	val := ctx.Value(common.AppContextKey)
+	if val != nil {
+		if appCtx, ok := val.(*common.AppRequestContext); ok {
+			return appCtx
+		}
+	}
+	panic("getAppCtx retuned error at schemaResolver.Tasks")
+}
 
 // Defining the Playground handler
 func PlaygroundHandler(gqlUrl string) gin.HandlerFunc {

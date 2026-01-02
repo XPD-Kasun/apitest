@@ -32,6 +32,11 @@ type taskRepoImpl struct {
 	CanInsert      bool
 }
 
+// GetByIds implements [TaskRepo].
+func (t *taskRepoImpl) GetByIds(ids ...int) ([]*Task, error) {
+	panic("unimplemented")
+}
+
 // GetAssignments implements [TaskRepo].
 func (t *taskRepoImpl) GetAssignments(taskId int) ([]*Assignment, error) {
 	panic("unimplemented")

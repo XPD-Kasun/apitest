@@ -14,6 +14,16 @@ type TaskServiceImpl struct {
 	repo TaskRepo
 }
 
+// GetTaskById implements [TaskService].
+func (t *TaskServiceImpl) GetTaskById(id int) (*Task, error) {
+	return t.repo.GetById(id)
+}
+
+// GetTasksByIds implements [TaskService].
+func (t *TaskServiceImpl) GetTasksByIds(ids []int) ([]*Task, error) {
+	return t.GetTasksByIds(ids)
+}
+
 // GetTasks implements [TaskService].
 func (t *TaskServiceImpl) GetTasks(cursor int, limit int) (*baserepo.PaginatedResult[*Task, int], error) {
 	return t.repo.GetByPage(&baserepo.PaginatedFilter[int]{Cursor: cursor, Limit: limit})

@@ -5,6 +5,7 @@ import (
 	"apitest/internal/adaptors/driving/gql"
 	"apitest/internal/adaptors/driving/restapi"
 	"apitest/internal/adaptors/driving/restapi/middleware"
+	"apitest/internal/core/common"
 	f "apitest/internal/core/common/filters"
 	"apitest/internal/logger"
 	"apitest/internal/wiring"
@@ -18,6 +19,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.uber.org/fx"
@@ -45,12 +47,13 @@ func main2() {
 
 type SetupServerParams struct {
 	fx.In
-	Lc         fx.Lifecycle
-	Config     *wiring.AppConfig
-	AuthCtrl   *restapi.AuthController
-	UserCtrl   *restapi.UserController
-	TaskCtrl   *restapi.TaskController
-	GqlHandler gin.HandlerFunc
+	Lc           fx.Lifecycle
+	Config       *wiring.AppConfig
+	AuthCtrl     *restapi.AuthController
+	UserCtrl     *restapi.UserController
+	TaskCtrl     *restapi.TaskController
+	GqlHandler   gin.HandlerFunc `name:"gqlMain"`
+	DLMiddleware gin.HandlerFunc `name:"dlMiddleware"`
 }
 
 func main() {
@@ -94,6 +97,8 @@ func setupServer(params SetupServerParams) error {
 		Handler: engine,
 	}
 
+	engine.Use(contextMiddleware())
+
 	authRoute := engine.Group("/api/v1/auth")
 	{
 		authRoute.Use(middleware.BearerAuthMiddleware())
@@ -113,8 +118,12 @@ func setupServer(params SetupServerParams) error {
 
 	}
 
-	engine.POST("/graphql", params.GqlHandler)
-	engine.GET("/ql", gql.PlaygroundHandler("/graphql"))
+	graphQLRoute := engine.Group("/ql/v1")
+	{
+		graphQLRoute.Use(params.DLMiddleware)
+		graphQLRoute.POST("/graphql", params.GqlHandler)
+		graphQLRoute.GET("/api", gql.PlaygroundHandler("/ql/v1/graphql"))
+	}
 
 	params.Lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -136,6 +145,29 @@ func setupServer(params SetupServerParams) error {
 	})
 
 	return nil
+}
+
+func contextMiddleware() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+
+		var reqCtx = common.AppRequestContext{}
+		setCorrelationId(&reqCtx, c)
+		ctx := context.WithValue(c.Request.Context(), common.AppContextKey, &reqCtx)
+		c.Request = c.Request.WithContext(ctx)
+	}
+}
+
+func setCorrelationId(reqCtx *common.AppRequestContext, c *gin.Context) {
+	cid := c.Request.Header.Get("X-Correlation-ID")
+	if cid == "" {
+		cid, err := gonanoid.New()
+		if err != nil {
+			logger.Error().Err(err).Msg("gonanoid failed to create a new nano id")
+		}
+		logger.Info().Str("corId", cid).Str("remoteIp", c.Request.RemoteAddr).Msg("BindCorId")
+	}
+	reqCtx.CorrelationId = common.Uniqueid(cid)
 }
 
 func main43() {

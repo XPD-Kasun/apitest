@@ -1,23 +1,46 @@
 package logger
 
 import (
+	"apitest/internal/core/common"
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
 )
 
+var appLogger AppLogger
+
 type AppLogger struct {
 	logger *zerolog.Logger
 }
 
-var appLogger AppLogger
+type logHook struct {
+}
+
+// Run implements [zerolog.Hook].
+func (l logHook) Run(e *zerolog.Event, level zerolog.Level, message string) {
+	r := e.GetCtx()
+	if r == nil {
+		return
+	}
+	if r.Value(common.AppContextKey) == nil {
+		return
+	}
+
+	appReqCtx := r.Value(common.AppContextKey).(*common.AppRequestContext)
+	if appReqCtx.CorrelationId != "" {
+		e.Str("corrid", string(appReqCtx.CorrelationId))
+	}
+}
 
 func InitLogger(logLevel string) {
 	fmt.Println("Application logging init")
 	setGlobalLogLevel(logLevel)
-	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	logger := zerolog.New(os.Stdout).Hook(logHook{}).With().Timestamp().Logger()
+
 	appLogger.logger = &logger
+	zerolog.DefaultContextLogger = appLogger.logger
 }
 
 func setGlobalLogLevel(logLevel string) {
@@ -71,4 +94,9 @@ func Fatal() *zerolog.Event {
 
 func Root() *zerolog.Logger {
 	return appLogger.logger
+}
+
+func SetCorrelationID(ctx context.Context, cid common.Uniqueid) {
+	appReqCtx := ctx.Value(common.AppContextKey).(*common.AppRequestContext)
+	appReqCtx.CorrelationId = cid
 }

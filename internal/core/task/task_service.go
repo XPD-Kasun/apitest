@@ -1,6 +1,8 @@
 package task
 
-import "apitest/internal/core/common/baserepo"
+import (
+	"apitest/internal/core/common/baserepo"
+)
 
 type TaskService interface {
 	CreateNew(task *Task) (*Task, error)
@@ -9,4 +11,6 @@ type TaskService interface {
 	RemoveTaskFromUser(userId, taskId int) error
 	GetTasks(cursor, limit int) (*baserepo.PaginatedResult[*Task, int], error)
 	GetAssignments(taskId int) ([]*Assignment, error)
+	GetTasksByIds(ids []int) ([]*Task, error)
+	GetTaskById(id int) (*Task, error)
 }
